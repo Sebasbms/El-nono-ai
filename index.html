@@ -350,7 +350,7 @@
            CONEXIÓN A LA API DE GEMINI (Cerebro)
            ========================================= */
         async function generarTextosGemini(base64Data, mimeType) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
             
             const prompt = `Actúa como un experto en diseño de muebles. Analiza esta imagen y devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta:
             {

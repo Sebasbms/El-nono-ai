@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Aplicación desarrollada by SeBaS -->
     <title>El Nono AI by SeBaS</title>
     <style>
         /* =========================================
@@ -12,6 +11,7 @@
         :root {
             --primary: #4facfe;
             --secondary: #00f2fe;
+            --error-color: #ff4b4b;
             --glass-bg: rgba(255, 255, 255, 0.1);
             --glass-border: rgba(255, 255, 255, 0.2);
             --text-light: #ffffff;
@@ -121,7 +121,6 @@
         .images-compare { display: flex; flex-direction: column; gap: 10px; }
         .images-compare img { width: 100%; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .img-label { font-size: 0.8rem; font-weight: bold; color: #666; text-transform: uppercase; margin-bottom: 5px; }
-
         .result-data h3 { margin-top: 0; color: #111; }
         .result-data p { line-height: 1.6; color: #444; }
         .features-list { padding-left: 20px; color: #444; }
@@ -129,18 +128,54 @@
         .btn-small { padding: 8px 15px; font-size: 0.9rem; background: #333; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background 0.2s;}
         .btn-small:hover { background: #555; }
 
+        /* =========================================
+           VENTANA MODAL DE ERRORES (NUEVO)
+           ========================================= */
+        .modal-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .modal-box {
+            background: rgba(30, 30, 40, 0.95);
+            border: 1px solid var(--error-color);
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%; max-width: 450px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(255, 75, 75, 0.3);
+            transform: scale(0.8); transition: transform 0.3s ease;
+        }
+        .modal-box h2 { color: var(--error-color); margin-top: 0; }
+        .modal-box p { color: #fff; font-family: monospace; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; word-break: break-all; }
+        .btn-close-modal {
+            background: var(--error-color); border: none; color: white; padding: 10px 25px;
+            border-radius: 20px; font-weight: bold; cursor: pointer; margin-top: 15px;
+        }
+
         @media (max-width: 768px) { .result-card { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
-    <!-- Interfaz de Usuario by SeBaS -->
+    <div id="errorModal" class="modal-overlay">
+        <div class="modal-box">
+            <h2>⚠️ Error del Servidor</h2>
+            <div style="color: #ccc; font-size: 0.9rem; margin-bottom: 10px;">La IA de Google respondió lo siguiente:</div>
+            <p id="errorTextDetails">Aquí aparecerá el error exacto</p>
+            <button class="btn-close-modal" onclick="cerrarModalError()">ENTENDIDO</button>
+        </div>
+    </div>
+
     <div class="glass-container">
         <header>
             <h1>El Nono AI <span class="author">by SeBaS</span></h1>
         </header>
 
-        <!-- PANEL DE CONFIGURACIÓN DE API KEY -->
         <div id="apiPanel" class="api-panel">
             <h3>🔑 Configuración de Inteligencia Artificial</h3>
             <p style="font-size: 0.9rem; color: #ddd;">Pega tu API Key de Gemini para activar la aplicación. Solo se guardará en tu navegador.</p>
@@ -175,6 +210,34 @@
 
     <script>
         /* =========================================
+           SISTEMA DE CAPTURA DE ERRORES (MODAL)
+           ========================================= */
+        const errorModal = document.getElementById('errorModal');
+        const errorTextDetails = document.getElementById('errorTextDetails');
+
+        function mostrarModalError(mensajeError) {
+            errorTextDetails.innerText = mensajeError;
+            errorModal.style.display = 'flex';
+            // Pequeño timeout para la animación de entrada
+            setTimeout(() => {
+                errorModal.style.opacity = '1';
+                errorModal.querySelector('.modal-box').style.transform = 'scale(1)';
+            }, 10);
+            
+            // Forzar a que vuelva a pedir la API por si estaba mal copiada
+            localStorage.removeItem('nono_api_key');
+            document.getElementById('apiPanel').style.display = 'block';
+        }
+
+        function cerrarModalError() {
+            errorModal.style.opacity = '0';
+            errorModal.querySelector('.modal-box').style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                errorModal.style.display = 'none';
+            }, 300);
+        }
+
+        /* =========================================
            GESTIÓN DE API KEY DESDE LA INTERFAZ
            ========================================= */
         let API_KEY = localStorage.getItem('nono_api_key') || "";
@@ -183,25 +246,21 @@
         const apiKeyInput = document.getElementById('apiKeyInput');
         const btnSaveApi = document.getElementById('btnSaveApi');
 
-        // Si ya hay una clave guardada, ocultar el panel al cargar
-        if (API_KEY) {
-            apiPanel.style.display = 'none';
-        }
+        if (API_KEY) { apiPanel.style.display = 'none'; }
 
-        // Al presionar ACEPTAR
         btnSaveApi.addEventListener('click', () => {
             const keyValue = apiKeyInput.value.trim();
-            if (keyValue.length > 20) { // Validación básica de longitud
+            if (keyValue.length > 20) {
                 API_KEY = keyValue;
-                localStorage.setItem('nono_api_key', API_KEY); // Guardar en el navegador
-                apiPanel.style.display = 'none'; // Desaparecer recuadro
+                localStorage.setItem('nono_api_key', API_KEY);
+                apiPanel.style.display = 'none';
             } else {
                 alert("Por favor, ingresa una API Key válida.");
             }
         });
 
         /* =========================================
-           VARIABLES GLOBALES
+           VARIABLES GLOBALES Y UI
            ========================================= */
         const fileInput = document.getElementById('fileInput');
         const previewGallery = document.getElementById('previewGallery');
@@ -212,9 +271,6 @@
         const resultsContainer = document.getElementById('resultsContainer');
         let selectedFiles = [];
 
-        /* =========================================
-           LÓGICA DE INTERFAZ (SELECCIÓN)
-           ========================================= */
         fileInput.addEventListener('change', (e) => {
             const files = Array.from(e.target.files);
             if (files.length > 5) { alert("Máximo 5 imágenes."); return; }
@@ -243,9 +299,8 @@
         btnProcess.addEventListener('click', async () => {
             if (selectedFiles.length === 0) return;
             
-            // Verificación extra por si no se puso la clave
             if (!API_KEY || API_KEY === "") {
-                alert("No se encontró ninguna API Key. Recarga la página e ingresa tu clave.");
+                alert("No se encontró ninguna API Key. Por favor ingresa tu clave.");
                 apiPanel.style.display = 'block';
                 return;
             }
@@ -260,30 +315,22 @@
                 const base64Data = fileBase64Full.split(',')[1];
                 const mimeType = file.type;
                 
-                // PASO 1: Análisis con Gemini
-                updateProgress(i, selectedFiles.length, "Gemini analizando mueble y generando textos...");
-                const textData = await generarTextosGemini(base64Data, mimeType);
+                updateProgress(i, selectedFiles.length, "Gemini analizando mueble...");
                 
-                // Si la API key es incorrecta y da error, frenamos para no gastar recursos
-                if (textData.titulo === "Error de Conexión") {
-                    updateProgress(i, selectedFiles.length, "Error al conectar con la IA.");
-                    renderResult(fileBase64Full, "https://via.placeholder.com/800x800.png?text=Error+de+IA", textData);
-                    // Si da error, mostramos el panel de API de nuevo por si se equivocó al copiar
-                    localStorage.removeItem('nono_api_key');
-                    apiPanel.style.display = 'block';
-                    break;
+                // Si la función devuelve null, significa que hubo un error y se abrió el modal
+                const textData = await generarTextosGemini(base64Data, mimeType);
+                if (!textData) {
+                    updateProgress(i, selectedFiles.length, "Proceso detenido por error de conexión.");
+                    break; 
                 }
 
-                // PASO 2: Generación de Imagen
                 updateProgress(i, selectedFiles.length, "Generando ambiente y recreando mueble...");
                 const nuevaImagenURL = generarImagenIA(textData.prompt_visual);
 
-                // Renderizar tarjeta de resultados
                 renderResult(fileBase64Full, nuevaImagenURL, textData);
             }
 
-            updateProgress(selectedFiles.length, selectedFiles.length, "¡Proceso finalizado!");
-            setTimeout(() => { progressContainer.style.display = 'none'; btnProcess.disabled = false; }, 3000);
+            setTimeout(() => { progressContainer.style.display = 'none'; btnProcess.disabled = false; }, 2000);
         });
 
         function updateProgress(current, total, message) {
@@ -334,8 +381,10 @@
                 });
 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Código ${response.status}`);
+                    // Extraemos el error crudo en formato JSON que devuelve Google
+                    const errorJson = await response.json().catch(() => ({}));
+                    const mensajeReal = errorJson.error?.message || await response.text() || `Error HTTP ${response.status}`;
+                    throw new Error(mensajeReal);
                 }
 
                 const data = await response.json();
@@ -343,13 +392,10 @@
                 return JSON.parse(textoGenerado);
 
             } catch (error) {
-                console.error("Error detallado con Gemini:", error);
-                return { 
-                    titulo: "Error de Conexión", 
-                    descripcion: `La API Key es incorrecta o hay un problema de red.`, 
-                    caracteristicas: ["Revisa tu API Key"],
-                    prompt_visual: "error"
-                };
+                console.error("Fallo cazado:", error);
+                // Aquí activamos la nueva ventana Modal de error
+                mostrarModalError(error.message);
+                return null;
             }
         }
 
@@ -357,7 +403,6 @@
            GENERACIÓN DE IMAGEN (Render Visual)
            ========================================= */
         function generarImagenIA(promptVisual) {
-            if(promptVisual === "error") return "https://via.placeholder.com/800x800.png?text=Fallo+en+API";
             const promptAmbientacion = `Professional interior design photography. A modern, well-lit realistic room, soft natural sunlight. In the center: ${promptVisual}. Cinematic lighting, 8k resolution, highly detailed, photorealistic furniture photography.`;
             const urlSegura = encodeURIComponent(promptAmbientacion);
             return `https://image.pollinations.ai/prompt/${urlSegura}?width=800&height=800&nologo=true&seed=${Date.now()}`;
@@ -405,21 +450,16 @@
             resultsContainer.appendChild(card);
         }
 
-        function abrirImagen(url) {
-            window.open(url, '_blank');
-        }
+        function abrirImagen(url) { window.open(url, '_blank'); }
 
         function copiarTextos(tituloId) {
             const cleanId = tituloId.replace(/\s+/g, '');
             const titulo = document.getElementById(`title-${cleanId}`).innerText;
             const desc = document.getElementById(`desc-${cleanId}`).innerText;
-            
             const textoCompleto = `*${titulo}*\n\n${desc}`;
             
             navigator.clipboard.writeText(textoCompleto).then(() => {
                 alert("¡Título y descripción copiados al portapapeles!");
-            }).catch(err => {
-                console.error('Error al copiar: ', err);
             });
         }
     </script>

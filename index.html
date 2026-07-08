@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Aplicación desarrollada by SeBaS -->
+    <title>El Nono AI by SeBaS</title>
+    <style>
+        /* =========================================
+           DISEÑO Y ESTILOS (CSS3 - Glassmorphism)
+           ========================================= */
+        :root {
+            --primary: #4facfe;
+            --secondary: #00f2fe;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-light: #ffffff;
+            --text-dark: #333333;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1f1c2c 0%, #928dab 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .glass-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 900px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        header { text-align: center; margin-bottom: 30px; }
+        h1 { margin: 0; font-size: 2.5rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .author { font-size: 1rem; color: var(--secondary); font-weight: 300; display: block; margin-top: 5px; }
+
+        /* Panel de API Key */
+        .api-panel {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--secondary);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            transition: opacity 0.5s ease;
+        }
+        
+        .api-input {
+            width: 80%;
+            max-width: 400px;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .api-input::placeholder { color: rgba(255,255,255,0.5); }
+        .api-input:focus { outline: none; border-color: var(--secondary); background: rgba(255,255,255,0.2); }
+
+        .upload-zone {
+            border: 2px dashed var(--glass-border);
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(0,0,0,0.1);
+        }
+        .upload-zone:hover { background: rgba(255,255,255,0.05); border-color: var(--primary); }
+
+        .btn {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4);
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 242, 254, 0.6); }
+        .btn:disabled { background: #555; box-shadow: none; cursor: not-allowed; transform: none; }
+
+        .preview-gallery { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; justify-content: center; }
+        .preview-item { width: 100px; height: 100px; border-radius: 10px; object-fit: cover; border: 2px solid var(--glass-border); }
+
+        .progress-container { width: 100%; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 20px; overflow: hidden; display: none; }
+        .progress-bar { height: 10px; background: linear-gradient(45deg, var(--primary), var(--secondary)); width: 0%; transition: width 0.4s ease; }
+        .status-text { text-align: center; margin-top: 10px; font-size: 0.9rem; }
+
+        .result-card {
+            background: rgba(255, 255, 255, 0.95); color: var(--text-dark); border-radius: 15px;
+            padding: 20px; margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transform: translateY(20px);
+            animation: slideUp 0.5s forwards ease-out;
+        }
+
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+
+        .images-compare { display: flex; flex-direction: column; gap: 10px; }
+        .images-compare img { width: 100%; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .img-label { font-size: 0.8rem; font-weight: bold; color: #666; text-transform: uppercase; margin-bottom: 5px; }
+
+        .result-data h3 { margin-top: 0; color: #111; }
+        .result-data p { line-height: 1.6; color: #444; }
+        .features-list { padding-left: 20px; color: #444; }
+        .action-buttons { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .btn-small { padding: 8px 15px; font-size: 0.9rem; background: #333; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background 0.2s;}
+        .btn-small:hover { background: #555; }
+
+        @media (max-width: 768px) { .result-card { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <!-- Interfaz de Usuario by SeBaS -->
+    <div class="glass-container">
+        <header>
+            <h1>El Nono AI <span class="author">by SeBaS</span></h1>
+        </header>
+
+        <!-- PANEL DE CONFIGURACIÓN DE API KEY -->
+        <div id="apiPanel" class="api-panel">
+            <h3>🔑 Configuración de Inteligencia Artificial</h3>
+            <p style="font-size: 0.9rem; color: #ddd;">Pega tu API Key de Gemini para activar la aplicación. Solo se guardará en tu navegador.</p>
+            <input type="password" id="apiKeyInput" class="api-input" placeholder="Ej: AIzaSy...">
+            <br>
+            <button id="btnSaveApi" class="btn btn-small" style="background: var(--primary);">ACEPTAR</button>
+        </div>
+
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--secondary)">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <h2>Selecciona fotografías de tus muebles</h2>
+            <p>1 a 5 imágenes (JPG, PNG, WEBP)</p>
+            <input type="file" id="fileInput" multiple accept="image/*" style="display:none">
+        </div>
+
+        <div class="preview-gallery" id="previewGallery"></div>
+
+        <div style="text-align: center;">
+            <button class="btn" id="btnProcess" disabled>PROCESAR IMÁGENES</button>
+        </div>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+            <div class="status-text" id="statusText">Iniciando motor by SeBaS...</div>
+        </div>
+    </div>
+
+    <div id="resultsContainer" style="width: 100%; max-width: 900px;"></div>
+
+    <script>
+        /* =========================================
+           GESTIÓN DE API KEY DESDE LA INTERFAZ
+           ========================================= */
+        let API_KEY = localStorage.getItem('nono_api_key') || "";
+        
+        const apiPanel = document.getElementById('apiPanel');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const btnSaveApi = document.getElementById('btnSaveApi');
+
+        // Si ya hay una clave guardada, ocultar el panel al cargar
+        if (API_KEY) {
+            apiPanel.style.display = 'none';
+        }
+
+        // Al presionar ACEPTAR
+        btnSaveApi.addEventListener('click', () => {
+            const keyValue = apiKeyInput.value.trim();
+            if (keyValue.length > 20) { // Validación básica de longitud
+                API_KEY = keyValue;
+                localStorage.setItem('nono_api_key', API_KEY); // Guardar en el navegador
+                apiPanel.style.display = 'none'; // Desaparecer recuadro
+            } else {
+                alert("Por favor, ingresa una API Key válida.");
+            }
+        });
+
+        /* =========================================
+           VARIABLES GLOBALES
+           ========================================= */
+        const fileInput = document.getElementById('fileInput');
+        const previewGallery = document.getElementById('previewGallery');
+        const btnProcess = document.getElementById('btnProcess');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const statusText = document.getElementById('statusText');
+        const resultsContainer = document.getElementById('resultsContainer');
+        let selectedFiles = [];
+
+        /* =========================================
+           LÓGICA DE INTERFAZ (SELECCIÓN)
+           ========================================= */
+        fileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length > 5) { alert("Máximo 5 imágenes."); return; }
+            selectedFiles = files.slice(0, 5);
+            renderPreviews();
+            btnProcess.disabled = selectedFiles.length === 0;
+        });
+
+        function renderPreviews() {
+            previewGallery.innerHTML = '';
+            selectedFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'preview-item';
+                    previewGallery.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        /* =========================================
+           PROCESAMIENTO PRINCIPAL
+           ========================================= */
+        btnProcess.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+            
+            // Verificación extra por si no se puso la clave
+            if (!API_KEY || API_KEY === "") {
+                alert("No se encontró ninguna API Key. Recarga la página e ingresa tu clave.");
+                apiPanel.style.display = 'block';
+                return;
+            }
+
+            btnProcess.disabled = true;
+            progressContainer.style.display = 'block';
+            resultsContainer.innerHTML = '';
+
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                const fileBase64Full = await toBase64(file);
+                const base64Data = fileBase64Full.split(',')[1];
+                const mimeType = file.type;
+                
+                // PASO 1: Análisis con Gemini
+                updateProgress(i, selectedFiles.length, "Gemini analizando mueble y generando textos...");
+                const textData = await generarTextosGemini(base64Data, mimeType);
+                
+                // Si la API key es incorrecta y da error, frenamos para no gastar recursos
+                if (textData.titulo === "Error de Conexión") {
+                    updateProgress(i, selectedFiles.length, "Error al conectar con la IA.");
+                    renderResult(fileBase64Full, "https://via.placeholder.com/800x800.png?text=Error+de+IA", textData);
+                    // Si da error, mostramos el panel de API de nuevo por si se equivocó al copiar
+                    localStorage.removeItem('nono_api_key');
+                    apiPanel.style.display = 'block';
+                    break;
+                }
+
+                // PASO 2: Generación de Imagen
+                updateProgress(i, selectedFiles.length, "Generando ambiente y recreando mueble...");
+                const nuevaImagenURL = generarImagenIA(textData.prompt_visual);
+
+                // Renderizar tarjeta de resultados
+                renderResult(fileBase64Full, nuevaImagenURL, textData);
+            }
+
+            updateProgress(selectedFiles.length, selectedFiles.length, "¡Proceso finalizado!");
+            setTimeout(() => { progressContainer.style.display = 'none'; btnProcess.disabled = false; }, 3000);
+        });
+
+        function updateProgress(current, total, message) {
+            const percentage = (current / total) * 100;
+            progressBar.style.width = percentage + '%';
+            statusText.innerText = `Imagen ${current + 1} de ${total}: ${message}`;
+        }
+
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        /* =========================================
+           CONEXIÓN A LA API DE GEMINI (Cerebro)
+           ========================================= */
+        async function generarTextosGemini(base64Data, mimeType) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+            
+            const prompt = `Actúa como un experto en diseño de muebles. Analiza esta imagen y devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta:
+            {
+                "titulo": "Nombre comercial atractivo",
+                "descripcion": "Descripción persuasiva del mueble destacando su calidad (2 oraciones)",
+                "caracteristicas": ["Característica 1", "Característica 2", "Característica 3"],
+                "prompt_visual": "Describe físicamente solo el mueble en inglés de forma extremadamente detallada: tipo de mueble, color exacto, material, diseño de patas, número de cajones/puertas, textura. No menciones el fondo actual. Ejemplo: A minimalist wooden nightstand, light oak color, two drawers with black metal handles, straight legs."
+            }`;
+
+            const requestBody = {
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        { inline_data: { mime_type: mimeType, data: base64Data } }
+                    ]
+                }],
+                generationConfig: {
+                    temperature: 0.2,
+                    response_mime_type: "application/json"
+                }
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Código ${response.status}`);
+                }
+
+                const data = await response.json();
+                const textoGenerado = data.candidates[0].content.parts[0].text;
+                return JSON.parse(textoGenerado);
+
+            } catch (error) {
+                console.error("Error detallado con Gemini:", error);
+                return { 
+                    titulo: "Error de Conexión", 
+                    descripcion: `La API Key es incorrecta o hay un problema de red.`, 
+                    caracteristicas: ["Revisa tu API Key"],
+                    prompt_visual: "error"
+                };
+            }
+        }
+
+        /* =========================================
+           GENERACIÓN DE IMAGEN (Render Visual)
+           ========================================= */
+        function generarImagenIA(promptVisual) {
+            if(promptVisual === "error") return "https://via.placeholder.com/800x800.png?text=Fallo+en+API";
+            const promptAmbientacion = `Professional interior design photography. A modern, well-lit realistic room, soft natural sunlight. In the center: ${promptVisual}. Cinematic lighting, 8k resolution, highly detailed, photorealistic furniture photography.`;
+            const urlSegura = encodeURIComponent(promptAmbientacion);
+            return `https://image.pollinations.ai/prompt/${urlSegura}?width=800&height=800&nologo=true&seed=${Date.now()}`;
+        }
+
+        /* =========================================
+           RENDERIZADO DE RESULTADOS
+           ========================================= */
+        function renderResult(originalSrc, newSrc, textData) {
+            const card = document.createElement('div');
+            card.className = 'result-card glass-container';
+            
+            const charList = textData.caracteristicas.map(c => `<li>${c}</li>`).join('');
+
+            card.innerHTML = `
+                <div class="images-compare">
+                    <div>
+                        <div class="img-label">Tu Fotografía (Original)</div>
+                        <img src="${originalSrc}" alt="Original">
+                    </div>
+                    <div>
+                        <div class="img-label">Mueble Ambientado (IA)</div>
+                        <img src="${newSrc}" alt="Generada" id="img-${textData.titulo.replace(/\s+/g, '')}">
+                    </div>
+                </div>
+                <div class="result-data">
+                    <h3 id="title-${textData.titulo.replace(/\s+/g, '')}">${textData.titulo}</h3>
+                    <p id="desc-${textData.titulo.replace(/\s+/g, '')}">${textData.descripcion}</p>
+                    <div class="img-label">Características Principales:</div>
+                    <ul class="features-list">
+                        ${charList}
+                    </ul>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-small" onclick="abrirImagen('${newSrc}')">
+                            Ver Imagen Generada
+                        </button>
+                        <button class="btn btn-small" onclick="copiarTextos('${textData.titulo}')">
+                            Copiar Textos
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            resultsContainer.appendChild(card);
+        }
+
+        function abrirImagen(url) {
+            window.open(url, '_blank');
+        }
+
+        function copiarTextos(tituloId) {
+            const cleanId = tituloId.replace(/\s+/g, '');
+            const titulo = document.getElementById(`title-${cleanId}`).innerText;
+            const desc = document.getElementById(`desc-${cleanId}`).innerText;
+            
+            const textoCompleto = `*${titulo}*\n\n${desc}`;
+            
+            navigator.clipboard.writeText(textoCompleto).then(() => {
+                alert("¡Título y descripción copiados al portapapeles!");
+            }).catch(err => {
+                console.error('Error al copiar: ', err);
+            });
+        }
+    </script>
+</body>
+</html>

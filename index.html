@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Aplicación desarrollada by SeBaS -->
     <title>El Nono AI by SeBaS</title>
     <style>
         /* =========================================
@@ -151,7 +152,8 @@
             transform: scale(0.8); transition: transform 0.3s ease;
         }
         .modal-box h2 { color: var(--error-color); margin-top: 0; }
-        .modal-box p { color: #fff; font-family: monospace; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; word-break: break-all; }
+        /* Permite que los saltos de línea se vean correctamente */
+        .modal-box p { color: #fff; font-family: monospace; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; word-break: break-all; white-space: pre-wrap; text-align: left; font-size: 0.85rem;}
         .btn-close-modal {
             background: var(--error-color); border: none; color: white; padding: 10px 25px;
             border-radius: 20px; font-weight: bold; cursor: pointer; margin-top: 15px;
@@ -162,20 +164,23 @@
 </head>
 <body>
 
+    <!-- Ventana Modal Flotante para Errores -->
     <div id="errorModal" class="modal-overlay">
         <div class="modal-box">
             <h2>⚠️ Error del Servidor</h2>
-            <div style="color: #ccc; font-size: 0.9rem; margin-bottom: 10px;">La IA de Google respondió lo siguiente:</div>
+            <div style="color: #ccc; font-size: 0.9rem; margin-bottom: 10px;">Diagnóstico Automático:</div>
             <p id="errorTextDetails">Aquí aparecerá el error exacto</p>
             <button class="btn-close-modal" onclick="cerrarModalError()">ENTENDIDO</button>
         </div>
     </div>
 
+    <!-- Interfaz de Usuario by SeBaS -->
     <div class="glass-container">
         <header>
             <h1>El Nono AI <span class="author">by SeBaS</span></h1>
         </header>
 
+        <!-- PANEL DE CONFIGURACIÓN DE API KEY -->
         <div id="apiPanel" class="api-panel">
             <h3>🔑 Configuración de Inteligencia Artificial</h3>
             <p style="font-size: 0.9rem; color: #ddd;">Pega tu API Key de Gemini para activar la aplicación. Solo se guardará en tu navegador.</p>
@@ -218,13 +223,12 @@
         function mostrarModalError(mensajeError) {
             errorTextDetails.innerText = mensajeError;
             errorModal.style.display = 'flex';
-            // Pequeño timeout para la animación de entrada
             setTimeout(() => {
                 errorModal.style.opacity = '1';
                 errorModal.querySelector('.modal-box').style.transform = 'scale(1)';
             }, 10);
             
-            // Forzar a que vuelva a pedir la API por si estaba mal copiada
+            // Borrar clave para forzar ingreso por si estaba mal
             localStorage.removeItem('nono_api_key');
             document.getElementById('apiPanel').style.display = 'block';
         }
@@ -317,7 +321,6 @@
                 
                 updateProgress(i, selectedFiles.length, "Gemini analizando mueble...");
                 
-                // Si la función devuelve null, significa que hubo un error y se abrió el modal
                 const textData = await generarTextosGemini(base64Data, mimeType);
                 if (!textData) {
                     updateProgress(i, selectedFiles.length, "Proceso detenido por error de conexión.");
@@ -347,10 +350,15 @@
         });
 
         /* =========================================
-           CONEXIÓN A LA API DE GEMINI (Cerebro)
+           CONEXIÓN A LA API DE GEMINI (AUTO-DESCUBRIMIENTO)
            ========================================= */
         async function generarTextosGemini(base64Data, mimeType) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
+            
+            // Si gemini-1.5-pro falla en el futuro, y el modal te da otro nombre, 
+            // simplemente reemplaza este texto por el modelo válido que te diga el sistema.
+            let modeloAUtilizar = "gemini-1.5-pro"; 
+            
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloAUtilizar}:generateContent?key=${API_KEY}`;
             
             const prompt = `Actúa como un experto en diseño de muebles. Analiza esta imagen y devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta:
             {
@@ -381,10 +389,24 @@
                 });
 
                 if (!response.ok) {
-                    // Extraemos el error crudo en formato JSON que devuelve Google
                     const errorJson = await response.json().catch(() => ({}));
-                    const mensajeReal = errorJson.error?.message || await response.text() || `Error HTTP ${response.status}`;
-                    throw new Error(mensajeReal);
+                    const mensajeReal = errorJson.error?.message || `Error HTTP ${response.status}`;
+                    
+                    // Si el modelo falla, ejecutamos una petición automática para ver la lista de tus modelos autorizados
+                    let modelosDisponibles = "No se pudieron obtener los modelos. Revisa tu API KEY.";
+                    try {
+                        const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`;
+                        const listResponse = await fetch(listUrl);
+                        if(listResponse.ok) {
+                            const listData = await listResponse.json();
+                            const visionModels = listData.models
+                                .filter(m => m.supportedGenerationMethods.includes("generateContent") && m.name.includes("gemini"))
+                                .map(m => m.name.replace('models/', ''));
+                            modelosDisponibles = visionModels.join('\n- ');
+                        }
+                    } catch(e) {}
+
+                    throw new Error(`${mensajeReal}\n\n🤖 TUS MODELOS AUTORIZADOS SON:\n- ${modelosDisponibles}\n\nSi ves uno distinto a 'gemini-1.5-pro', escríbelo en la variable 'modeloAUtilizar' en el código.`);
                 }
 
                 const data = await response.json();
@@ -393,7 +415,6 @@
 
             } catch (error) {
                 console.error("Fallo cazado:", error);
-                // Aquí activamos la nueva ventana Modal de error
                 mostrarModalError(error.message);
                 return null;
             }
